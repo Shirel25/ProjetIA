@@ -9,18 +9,19 @@ BLACK=(0,0,0)
 RED=(255,0,0)
 YELLOW=(255,255,0)
 
-ROW_COUNT =6
-COLUMN_COUNT=7
-WINDOW_LENGTH=4
-EMPTY=0
+ROW_COUNT = 6
+COLUMN_COUNT = 7
+WINDOW_LENGTH = 4
+EMPTY = 0
 
-PLAYER=0
-AI=1
+PLAYER = 0
+AI = 1
 
-PLAYER_PIECE=1
-AI_PIECE=2
+PLAYER_PIECE = 1
+AI_PIECE = 2
 
 def create_board():
+    #affichage tableau dans le terminal
     board=np.zeros((ROW_COUNT,COLUMN_COUNT))
     return board
 
@@ -30,17 +31,17 @@ def drop_piece(board,row,col,piece):
 
 #verifier si un emplacement est valide revient a verifier que la ligne du haut (5eme ) est vide (a 0)
 def is_valid_location(board,col):
-    return board[ROW_COUNT-1][col]==0
+    return board[ROW_COUNT-1][col] == 0
 
 def get_next_open_row(board,col):
      for r in range(ROW_COUNT):
-            if board[r][col]==0:
+            if board[r][col] == 0:
                 return r
 #iverser l'affichage du tableau : on retourne le tableau sur l'axe des x              
 def print_board(board):
        print (np.flip(board,0))
 
-#une fonction qui nous indique si on a gagner 
+#une fonction qui nous indique si on a gagné 
 def winning_move(boad,piece):
      # check horizontal
     for c in range(COLUMN_COUNT-3):
@@ -84,8 +85,8 @@ def evaluate_window(window,piece):
 
      return score                  
               
-#fonction qui examine l'etat d'une piece selon sa porition 
-# elle renvoi un score de 100 si elle est de puissance, sinon 0    
+#fonction qui examine l'etat d'une piece selon sa position 
+# elle renvoie un score de 100 si elle est de puissance, sinon 0    
 def score_position(board,piece):
      score=0
 
@@ -185,7 +186,7 @@ def minimax(board,depth,alpha,beta,maximizingPlayer):
 
 
 
-#une fonction qui determine si un emplacement est valid
+#une fonction qui determine si un emplacement est valide
 def get_valid_locations(board):
      valid_locations=[]
      for col in range(COLUMN_COUNT):
@@ -263,6 +264,8 @@ while not game_over:
                     pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE/2)),RADIUS)
           pygame.display.update()
           if event.type == pygame.MOUSEBUTTONDOWN:
+               pygame.draw.rect(screen, BLACK, (0,0, width, SQUARESIZE))
+
                if turn ==PLAYER:
                     posx= event.pos[0]
                     col=int (math.floor (posx/SQUARESIZE))
@@ -303,7 +306,7 @@ while not game_over:
                     screen.blit(label,(40,10))
                     game_over=True
 
-               print_board(board)
+               print_board(board)  
                draw_board(board)
 
                turn+=1
