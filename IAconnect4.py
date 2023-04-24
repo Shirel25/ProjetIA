@@ -13,8 +13,9 @@ JAUNE = (255,255,0)
 #initialisation de la fenêtre
 NB_LIGNES = 6
 NB_COLONNES = 7
-WINDOW_LENGTH = 4
+FENETRE_LENGTH = 4 
 VIDE = 0
+TAILLE_GRILLE = 100
 
 #initialisation du numéro de jeton des joueurs
 JOUEUR = 0
@@ -30,9 +31,9 @@ def creer_tableau():
 	tableau = np.zeros((NB_LIGNES,NB_COLONNES))
 	return tableau
 
-def depot_jeton(tableau, row, col, jeton):
+def depot_jeton(tableau, ligne, col, jeton):
 	#le tableau dans le terminal va se remplir avec les jetons ajoutés par les joueurs
-	tableau[row][col] = jeton
+	tableau[ligne][col] = jeton
 
 def emplacement_valide(tableau, col):
 	#verifier si un emplacement est valide revient a verifier que la ligne du haut (5eme) est vide (a 0)
@@ -49,28 +50,30 @@ def afficher_tableau_terminal(tableau):
 	print(np.flip(tableau, 0))
 
 def gagne(tableau, jeton):
+	#fonction qui retourne True si le joueur a gagné 
+
 	#Vérification horizontale
-	for c in range(NB_COLONNES-3):
-		for r in range(NB_LIGNES):
-			if tableau[r][c] == jeton and tableau[r][c+1] == jeton and tableau[r][c+2] == jeton and tableau[r][c+3] == jeton:
+	for c in range(NB_COLONNES-3): #seulement à partir de la position où il est possible d'être dans une ligne gagnante
+		for l in range(NB_LIGNES):
+			if tableau[l][c] == jeton and tableau[l][c+1] == jeton and tableau[l][c+2] == jeton and tableau[l][c+3] == jeton:
 				return True
 
 	#Vérification verticale
 	for c in range(NB_COLONNES):
-		for r in range(NB_LIGNES-3):
-			if tableau[r][c] == jeton and tableau[r+1][c] == jeton and tableau[r+2][c] == jeton and tableau[r+3][c] == jeton:
+		for l in range(NB_LIGNES-3):
+			if tableau[l][c] == jeton and tableau[l+1][c] == jeton and tableau[l+2][c] == jeton and tableau[l+3][c] == jeton:
 				return True
 
 	#Vérification diagonale positive
 	for c in range(NB_COLONNES-3):
-		for r in range(NB_LIGNES-3):
-			if tableau[r][c] == jeton and tableau[r+1][c+1] == jeton and tableau[r+2][c+2] == jeton and tableau[r+3][c+3] == jeton:
+		for l in range(NB_LIGNES-3):
+			if tableau[l][c] == jeton and tableau[l+1][c+1] == jeton and tableau[l+2][c+2] == jeton and tableau[l+3][c+3] == jeton:
 				return True
 
 	#Vérification diagonale négative
 	for c in range(NB_COLONNES-3):
-		for r in range(3, NB_LIGNES):
-			if tableau[r][c] == jeton and tableau[r-1][c+1] == jeton and tableau[r-2][c+2] == jeton and tableau[r-3][c+3] == jeton:
+		for l in range(3, NB_LIGNES):
+			if tableau[l][c] == jeton and tableau[l-1][c+1] == jeton and tableau[l-2][c+2] == jeton and tableau[l-3][c+3] == jeton:
 				return True
 
 def evaluate_window(window, jeton):
@@ -92,39 +95,39 @@ def evaluate_window(window, jeton):
 	return score
 
 def score_position(tableau, jeton):
-	#fonction qui examine l'etat d'un jetons selon sa position 
-    #elle renvoie un score de 100 si elle est de puissance, sinon 0    
+	#fonction qui examine l'etat d'un jeton selon sa position 
+    #elle renvoie un score de 100 si elle est de puissance 4, sinon 0    
 	score = 0
 
-	## Score clonne du mileu
+	## Score colonne du mileu
 	center_array = [int(i) for i in list(tableau[:, NB_COLONNES//2])]
 	center_count = center_array.count(jeton)
 	score += center_count * 3
 
 	## Score horizontale
-	for r in range(NB_LIGNES):
-		row_array = [int(i) for i in list(tableau[r,:])]
+	for l in range(NB_LIGNES):
+		row_array = [int(i) for i in list(tableau[l,:])]
 		for c in range(NB_COLONNES-3):
-			window = row_array[c:c+WINDOW_LENGTH]
+			window = row_array[c:c+FENETRE_LENGTH]
 			score += evaluate_window(window, jeton)
 
 	## Score verticale
 	for c in range(NB_COLONNES):
 		col_array = [int(i) for i in list(tableau[:,c])]
 		for r in range(NB_LIGNES-3):
-			window = col_array[r:r+WINDOW_LENGTH]
+			window = col_array[r:r+FENETRE_LENGTH]
 			score += evaluate_window(window, jeton)
 
 	## Score diagonale positive
 	for r in range(NB_LIGNES-3):
 		for c in range(NB_COLONNES-3):
-			window = [tableau[r+i][c+i] for i in range(WINDOW_LENGTH)]
+			window = [tableau[r+i][c+i] for i in range(FENETRE_LENGTH)]
 			score += evaluate_window(window, jeton)
 
     ## Score diagonale négative
 	for r in range(NB_LIGNES-3):
 		for c in range(NB_COLONNES-3):
-			window = [tableau[r+3-i][c+i] for i in range(WINDOW_LENGTH)]
+			window = [tableau[r+3-i][c+i] for i in range(FENETRE_LENGTH)]
 			score += evaluate_window(window, jeton)
 
 	return score
@@ -133,7 +136,7 @@ def is_terminal_node(tableau):
 	return gagne(tableau, JETON_JOUEUR) or gagne(tableau, JETON_IA) or len(get_emplacement_valide(tableau)) == 0
 
 def minimax(tableau, depth, alpha, beta, maximizingPlayer):
-	valid_locations = get_emplacement_valide(tableau)
+	bon_emplacement = get_emplacement_valide(tableau)
 	is_terminal = is_terminal_node(tableau)
 	if depth == 0 or is_terminal:
 		if is_terminal:
@@ -147,11 +150,11 @@ def minimax(tableau, depth, alpha, beta, maximizingPlayer):
 			return (None, score_position(tableau, JETON_IA))
 	if maximizingPlayer:
 		value = -math.inf
-		column = random.choice(valid_locations)
-		for col in valid_locations:
-			row = get_ligne_suivante(tableau, col)
+		column = random.choice(bon_emplacement)
+		for col in bon_emplacement:
+			ligne = get_ligne_suivante(tableau, col)
 			b_copy = tableau.copy()
-			depot_jeton(b_copy, row, col, JETON_IA)
+			depot_jeton(b_copy, ligne, col, JETON_IA)
 			new_score = minimax(b_copy, depth-1, alpha, beta, False)[1]
 			if new_score > value:
 				value = new_score
@@ -163,11 +166,11 @@ def minimax(tableau, depth, alpha, beta, maximizingPlayer):
 
 	else: # Minimizing player
 		value = math.inf
-		column = random.choice(valid_locations)
-		for col in valid_locations:
-			row = get_ligne_suivante(tableau, col)
+		column = random.choice(bon_emplacement)
+		for col in bon_emplacement:
+			ligne = get_ligne_suivante(tableau, col)
 			b_copy = tableau.copy()
-			depot_jeton(b_copy, row, col, JETON_JOUEUR)
+			depot_jeton(b_copy, ligne, col, JETON_JOUEUR)
 			new_score = minimax(b_copy, depth-1, alpha, beta, True)[1]
 			if new_score < value:
 				value = new_score
@@ -178,125 +181,134 @@ def minimax(tableau, depth, alpha, beta, maximizingPlayer):
 		return column, value
 
 def get_emplacement_valide(tableau):
-	valid_locations = []
+	#fonction pour savoir si l'emplacement choisi est valide
+	bon_emplacement = []
 	for col in range(NB_COLONNES):
 		if emplacement_valide(tableau, col):
-			valid_locations.append(col)
-	return valid_locations
+			bon_emplacement.append(col)
+	return bon_emplacement
 
-def pick_best_move(tableau, jeton):
+def meilleur_depot(tableau, jeton):
+	#fonction qui retourne la colonne ayant le meilleur choix de depot de jeton
+	bon_emplacement = get_emplacement_valide(tableau)
+	meilleur_score = -10000
+	meilleure_col = random.choice(bon_emplacement)
+	for col in bon_emplacement:
+		ligne = get_ligne_suivante(tableau, col)
+		tableau_tmp = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact
+		depot_jeton(tableau_tmp, ligne, col, jeton)
+		score = score_position(tableau_tmp, jeton)
+		if score > meilleur_score:
+			meilleur_score = score
+			meilleure_col = col
+			
+	return meilleure_col
 
-	valid_locations = get_emplacement_valide(tableau)
-	best_score = -10000
-	best_col = random.choice(valid_locations)
-	for col in valid_locations:
-		row = get_ligne_suivante(tableau, col)
-		temp_board = tableau.copy()
-		depot_jeton(temp_board, row, col, jeton)
-		score = score_position(temp_board, jeton)
-		if score > best_score:
-			best_score = score
-			best_col = col
-
-	return best_col
-
-def draw_board(tableau):
+def draw_tableau(tableau):
+	#création de la fenetre graphique
 	for c in range(NB_COLONNES):
-		for r in range(NB_LIGNES):
-			pygame.draw.rect(screen, BLEU, (c*SQUARESIZE, r*SQUARESIZE+SQUARESIZE, SQUARESIZE, SQUARESIZE))
-			pygame.draw.circle(screen, NOIR, (int(c*SQUARESIZE+SQUARESIZE/2), int(r*SQUARESIZE+SQUARESIZE+SQUARESIZE/2)), RADIUS)
+		for l in range(NB_LIGNES):
+			pygame.draw.rect(fenetre, BLEU, (c*TAILLE_GRILLE, l*TAILLE_GRILLE+TAILLE_GRILLE, TAILLE_GRILLE, TAILLE_GRILLE))
+			pygame.draw.circle(fenetre, NOIR, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), int(l*TAILLE_GRILLE+TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE)
 	
 	for c in range(NB_COLONNES):
-		for r in range(NB_LIGNES):		
-			if tableau[r][c] == JETON_JOUEUR:
-				pygame.draw.circle(screen, ROUGE, (int(c*SQUARESIZE+SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
-			elif tableau[r][c] == JETON_IA: 
-				pygame.draw.circle(screen, JAUNE, (int(c*SQUARESIZE+SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
+		for l in range(NB_LIGNES):		
+			if tableau[l][c] == JETON_JOUEUR:
+				pygame.draw.circle(fenetre, ROUGE, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), hauteur-int(l*TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE) #on ajoute "hauteur -" pour que le tableau se remplisse 
+			elif tableau[l][c] == JETON_IA: 																									 #par le bas d'abord							
+				pygame.draw.circle(fenetre, JAUNE, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), hauteur-int(l*TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE)
 	pygame.display.update()
+
+
+
+
 
 tableau = creer_tableau()
 afficher_tableau_terminal(tableau)
 game_over = False
 
+#intialisation de la fenêtre
 pygame.init()
 
-SQUARESIZE = 100
 
-width = NB_COLONNES * SQUARESIZE
-height = (NB_LIGNES+1) * SQUARESIZE
+largeur = NB_COLONNES * TAILLE_GRILLE
+hauteur = (NB_LIGNES+1) * TAILLE_GRILLE #en comptant la ligne du haut où le jeton se déplace
 
-size = (width, height)
+taille = (largeur, hauteur)
 
-RADIUS = int(SQUARESIZE/2 - 5)
+CERCLE = int(TAILLE_GRILLE/2 - 5)
 
-screen = pygame.display.set_mode(size)
-draw_board(tableau)
+fenetre = pygame.display.set_mode(taille)
+draw_tableau(tableau)
 pygame.display.update()
 
-myfont = pygame.font.SysFont("monospace", 75)
+#police et taille d'écriture
+times_new_roman = pygame.font.SysFont('Times New Roman', 75)
 
-turn = random.randint(JOUEUR, IA)
+#choix aléatoire du joueur qui commence la partie
+tour = random.randint(JOUEUR, IA)
 
 while not game_over:
-
+	#pour tout évênement
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			sys.exit()
 
 		if event.type == pygame.MOUSEMOTION:
-			pygame.draw.rect(screen, NOIR, (0,0, width, SQUARESIZE))
+			#si on bouge la souris, le jeton suit le mouvement en haut des colonnes
+			pygame.draw.rect(fenetre, NOIR, (0,0, largeur, TAILLE_GRILLE))
 			posx = event.pos[0]
-			if turn == JOUEUR:
-				pygame.draw.circle(screen, ROUGE, (posx, int(SQUARESIZE/2)), RADIUS)
+			if tour == JOUEUR:
+				pygame.draw.circle(fenetre, ROUGE, (posx, int(TAILLE_GRILLE/2)), CERCLE)
 
 		pygame.display.update()
 
 		if event.type == pygame.MOUSEBUTTONDOWN:
-			pygame.draw.rect(screen, NOIR, (0,0, width, SQUARESIZE))
+			pygame.draw.rect(fenetre, NOIR, (0,0, largeur, TAILLE_GRILLE))
 			#print(event.pos)
-			# Ask for Player 1 Input
-			if turn == JOUEUR:
+			
+			if tour == JOUEUR:
 				posx = event.pos[0]
-				col = int(math.floor(posx/SQUARESIZE))
+				col = int(math.floor(posx/TAILLE_GRILLE))
 
 				if emplacement_valide(tableau, col):
-					row = get_ligne_suivante(tableau, col)
-					depot_jeton(tableau, row, col, JETON_JOUEUR)
+					ligne = get_ligne_suivante(tableau, col)
+					depot_jeton(tableau, ligne, col, JETON_JOUEUR)
 
 					if gagne(tableau, JETON_JOUEUR):
-						label = myfont.render("Joueur 1 a gagné !!!", 1, ROUGE)
-						screen.blit(label, (40,10))
+						label = times_new_roman.render("Joueur 1 a gagné !!!", 1, ROUGE)
+						fenetre.blit(label, (50,10)) #affichage du label sur la fenetre graphique
 						game_over = True
 
-					turn += 1
-					turn = turn % 2
+					tour += 1
+					tour = tour % 2
 
 					afficher_tableau_terminal(tableau)
-					draw_board(tableau)
+					draw_tableau(tableau)
 
 
-	# # Ask for Player 2 Input
-	if turn == IA and not game_over:				
+	# Si c'est au tour de l'IA et que le jeu n'est pas fini
+	if tour == IA and not game_over:				
 
 		#col = random.randint(0, NB_COLONNES-1)
-		#col = pick_best_move(tableau, JETON_IA)
+		#col = meilleur_depot(tableau, JETON_IA)
 		col, minimax_score = minimax(tableau, 5, -math.inf, math.inf, True)
 
 		if emplacement_valide(tableau, col):
-			#pygame.time.wait(500)
-			row = get_ligne_suivante(tableau, col)
-			depot_jeton(tableau, row, col, JETON_IA)
+			pygame.time.wait(500) #temps d'attente pour que l'IA joue 
+			ligne = get_ligne_suivante(tableau, col)
+			depot_jeton(tableau, ligne, col, JETON_IA)
 
 			if gagne(tableau, JETON_IA):
-				label = myfont.render("Joueur 2 a gagné !!!", 1, JAUNE)
-				screen.blit(label, (40,10))
+				label = times_new_roman.render("Joueur 2 a gagné !!!", 1, JAUNE)
+				fenetre.blit(label, (50,10)) #affichage du label sur la fenetre graphique
 				game_over = True
 
 			afficher_tableau_terminal(tableau)
-			draw_board(tableau)
+			draw_tableau(tableau)
 
-			turn += 1
-			turn = turn % 2
+			tour += 1
+			tour = tour % 2
 
 	if game_over:
-		pygame.time.wait(3000)
+		pygame.time.wait(5000)
