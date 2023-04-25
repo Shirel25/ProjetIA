@@ -40,9 +40,9 @@ def emplacement_valide(tableau, col):
 	return tableau[NB_LIGNES-1][col] == 0
 
 def get_ligne_suivante(tableau, col):
-	for r in range(NB_LIGNES):
-		if tableau[r][col] == 0:
-			return r
+	for l in range(NB_LIGNES):
+		if tableau[l][col] == 0:
+			return l
 
 def afficher_tableau_terminal(tableau):
 	#iverser l'affichage du tableau : on retourne le tableau pour qu'il corresponde aux jetons
@@ -76,20 +76,21 @@ def gagne(tableau, jeton):
 			if tableau[l][c] == jeton and tableau[l-1][c+1] == jeton and tableau[l-2][c+2] == jeton and tableau[l-3][c+3] == jeton:
 				return True
 
-def evaluate_window(window, jeton):
+def calcul_score(fenetre, jeton):
+	#retourne le score du joueur en fonction des possibilités qui s'offrent à celui selon son placement
 	score = 0
-	jeton_suivant = JETON_JOUEUR
+	jeton_adverse = JETON_JOUEUR
 	if jeton == JETON_JOUEUR:
-		jeton_suivant = JETON_IA
+		jeton_adverse = JETON_IA
 
-	if window.count(jeton) == 4:
+	if fenetre.count(jeton) == 4:
 		score += 100
-	elif window.count(jeton) == 3 and window.count(VIDE) == 1:
+	elif fenetre.count(jeton) == 3 and fenetre.count(VIDE) == 1:
 		score += 5
-	elif window.count(jeton) == 2 and window.count(VIDE) == 2:
+	elif fenetre.count(jeton) == 2 and fenetre.count(VIDE) == 2:
 		score += 2
 
-	if window.count(jeton_suivant) == 3 and window.count(VIDE) == 1:
+	if fenetre.count(jeton_adverse) == 3 and fenetre.count(VIDE) == 1:
 		score -= 4
 
 	return score
@@ -99,86 +100,95 @@ def score_position(tableau, jeton):
     #elle renvoie un score de 100 si elle est de puissance 4, sinon 0    
 	score = 0
 
-	## Score colonne du mileu
-	center_array = [int(i) for i in list(tableau[:, NB_COLONNES//2])]
-	center_count = center_array.count(jeton)
-	score += center_count * 3
+	## Score colonne du milieu
+	tableau_centre = [int(i) for i in list(tableau[:, NB_COLONNES//2])]  #//2 pour avoir la colonne du milieu
+	centre_count = tableau_centre.count(jeton)
+	score += centre_count * 3
 
 	## Score horizontale
 	for l in range(NB_LIGNES):
-		row_array = [int(i) for i in list(tableau[l,:])]
+		tableau_ligne = [int(i) for i in list(tableau[l,:])]
 		for c in range(NB_COLONNES-3):
-			window = row_array[c:c+FENETRE_LENGTH]
-			score += evaluate_window(window, jeton)
+			fenetre = tableau_ligne[c:c+FENETRE_LENGTH]
+			score += calcul_score(fenetre, jeton)
 
 	## Score verticale
 	for c in range(NB_COLONNES):
-		col_array = [int(i) for i in list(tableau[:,c])]
-		for r in range(NB_LIGNES-3):
-			window = col_array[r:r+FENETRE_LENGTH]
-			score += evaluate_window(window, jeton)
+		tableau_col = [int(i) for i in list(tableau[:,c])]
+		for l in range(NB_LIGNES-3):
+			fenetre = tableau_col[l:l+FENETRE_LENGTH]
+			score += calcul_score(fenetre, jeton)
 
 	## Score diagonale positive
-	for r in range(NB_LIGNES-3):
+	for l in range(NB_LIGNES-3):
 		for c in range(NB_COLONNES-3):
-			window = [tableau[r+i][c+i] for i in range(FENETRE_LENGTH)]
-			score += evaluate_window(window, jeton)
+			fenetre = [tableau[l+i][c+i] for i in range(FENETRE_LENGTH)]
+			score += calcul_score(fenetre, jeton)
 
     ## Score diagonale négative
-	for r in range(NB_LIGNES-3):
+	for l in range(NB_LIGNES-3):
 		for c in range(NB_COLONNES-3):
-			window = [tableau[r+3-i][c+i] for i in range(FENETRE_LENGTH)]
-			score += evaluate_window(window, jeton)
+			fenetre = [tableau[l+3-i][c+i] for i in range(FENETRE_LENGTH)]
+			score += calcul_score(fenetre, jeton)
 
 	return score
 
-def is_terminal_node(tableau):
+def fin_jeu(tableau):
+	#si le joueur gagne, l'IA gagne, ou toutes les cases sont remplies 
 	return gagne(tableau, JETON_JOUEUR) or gagne(tableau, JETON_IA) or len(get_emplacement_valide(tableau)) == 0
 
-def minimax(tableau, depth, alpha, beta, maximizingPlayer):
+
+def algo_minimax(tableau, profondeur, alpha, beta, joueurMAX):
+	#algo representant un arbre dont les noeuds vont alterner entre MAX et MIN
+	#MAX va chercher à faire remonter à la racine de l'arbre la plus grande valeur de sortie, tandis que 
+	#MIN va chercher à faire remonter la plus basse
 	bon_emplacement = get_emplacement_valide(tableau)
-	is_terminal = is_terminal_node(tableau)
-	if depth == 0 or is_terminal:
-		if is_terminal:
+	partie_finie = fin_jeu(tableau)
+	if profondeur == 0 or partie_finie:
+		if partie_finie:
 			if gagne(tableau, JETON_IA):
 				return (None, 100000000000000)
 			elif gagne(tableau, JETON_JOUEUR):
 				return (None, -10000000000000)
-			else: # Game is over, no more valid moves
+			else: #Pas de gagnant, plus de possibilité de jouer
 				return (None, 0)
-		else: # Depth is zero
+		else: # profondeur à 0
 			return (None, score_position(tableau, JETON_IA))
-	if maximizingPlayer:
+	
+	# Joueur MAX
+	if joueurMAX:
+		#on met le score à une faible valeur
 		value = -math.inf
-		column = random.choice(bon_emplacement)
+		colonne = random.choice(bon_emplacement)
 		for col in bon_emplacement:
 			ligne = get_ligne_suivante(tableau, col)
-			b_copy = tableau.copy()
-			depot_jeton(b_copy, ligne, col, JETON_IA)
-			new_score = minimax(b_copy, depth-1, alpha, beta, False)[1]
-			if new_score > value:
-				value = new_score
-				column = col
+			tab_copie = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact sur le tableau de base
+			depot_jeton(tab_copie, ligne, col, JETON_IA)
+			nv_score = algo_minimax(tab_copie, profondeur-1, alpha, beta, False)[1]
+			if nv_score > value:
+				value = nv_score
+				colonne = col
 			alpha = max(alpha, value)
 			if alpha >= beta:
 				break
-		return column, value
+		return colonne, value
 
-	else: # Minimizing player
+	else: # Joueur MIN
+		#on met le score à une forte valeur
 		value = math.inf
-		column = random.choice(bon_emplacement)
+		colonne = random.choice(bon_emplacement)
 		for col in bon_emplacement:
 			ligne = get_ligne_suivante(tableau, col)
-			b_copy = tableau.copy()
-			depot_jeton(b_copy, ligne, col, JETON_JOUEUR)
-			new_score = minimax(b_copy, depth-1, alpha, beta, True)[1]
-			if new_score < value:
-				value = new_score
-				column = col
+			tab_copie = tableau.copy()
+			depot_jeton(tab_copie, ligne, col, JETON_JOUEUR)
+			nv_score = algo_minimax(tab_copie, profondeur-1, alpha, beta, True)[1]
+			if nv_score < value:
+				value = nv_score
+				colonne = col
 			beta = min(beta, value)
 			if alpha >= beta:
 				break
-		return column, value
+		return colonne, value
 
 def get_emplacement_valide(tableau):
 	#fonction pour savoir si l'emplacement choisi est valide
@@ -195,7 +205,7 @@ def meilleur_depot(tableau, jeton):
 	meilleure_col = random.choice(bon_emplacement)
 	for col in bon_emplacement:
 		ligne = get_ligne_suivante(tableau, col)
-		tableau_tmp = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact
+		tableau_tmp = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact sur le tableau de base
 		depot_jeton(tableau_tmp, ligne, col, jeton)
 		score = score_position(tableau_tmp, jeton)
 		if score > meilleur_score:
@@ -292,7 +302,7 @@ while not game_over:
 
 		#col = random.randint(0, NB_COLONNES-1)
 		#col = meilleur_depot(tableau, JETON_IA)
-		col, minimax_score = minimax(tableau, 5, -math.inf, math.inf, True)
+		col, minimax_score = algo_minimax(tableau, 5, -math.inf, math.inf, True)
 
 		if emplacement_valide(tableau, col):
 			pygame.time.wait(500) #temps d'attente pour que l'IA joue 
