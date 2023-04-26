@@ -4,6 +4,10 @@ import pygame
 import sys
 import math
 
+########################################################################################
+################################  Initialisations  #####################################
+########################################################################################
+
 #intialisation des couleurs
 BLEU = (0,0,255)
 NOIR = (0,0,0)
@@ -24,6 +28,9 @@ IA = 1
 JETON_JOUEUR = 1
 JETON_IA = 2
 
+########################################################################################
+###################################  Interface  ########################################
+########################################################################################
 
 def creer_tableau():
 	#fonction servant à afficher le tableau correspondant 
@@ -35,9 +42,6 @@ def depot_jeton(tableau, ligne, col, jeton):
 	#le tableau dans le terminal va se remplir avec les jetons ajoutés par les joueurs
 	tableau[ligne][col] = jeton
 
-def emplacement_valide(tableau, col):
-	#verifier si un emplacement est valide revient a verifier que la ligne du haut (5eme) est vide (a 0)
-	return tableau[NB_LIGNES-1][col] == 0
 
 def get_ligne_suivante(tableau, col):
 	for l in range(NB_LIGNES):
@@ -48,6 +52,30 @@ def afficher_tableau_terminal(tableau):
 	#iverser l'affichage du tableau : on retourne le tableau pour qu'il corresponde aux jetons
     # qui remplissent le tableau d'abord par le bas       
 	print(np.flip(tableau, 0))
+
+def draw_tableau(tableau):
+	#création de la fenetre graphique
+	for c in range(NB_COLONNES):
+		for l in range(NB_LIGNES):
+			pygame.draw.rect(fenetre, BLEU, (c*TAILLE_GRILLE, l*TAILLE_GRILLE+TAILLE_GRILLE, TAILLE_GRILLE, TAILLE_GRILLE))
+			pygame.draw.circle(fenetre, NOIR, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), int(l*TAILLE_GRILLE+TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE)
+	
+	for c in range(NB_COLONNES):
+		for l in range(NB_LIGNES):		
+			if tableau[l][c] == JETON_JOUEUR:
+				pygame.draw.circle(fenetre, ROUGE, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), hauteur-int(l*TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE) #on ajoute "hauteur -" pour que le tableau se remplisse 
+			elif tableau[l][c] == JETON_IA: 																									 #par le bas d'abord							
+				pygame.draw.circle(fenetre, JAUNE, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), hauteur-int(l*TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE)
+	pygame.display.update()
+
+########################################################################################
+##################################  Verification  ######################################
+########################################################################################
+
+def emplacement_valide(tableau, col):
+	#verifier si un emplacement est valide revient a verifier que la ligne du haut (5eme) est vide (a 0)
+	return tableau[NB_LIGNES-1][col] == 0
+
 
 def gagne(tableau, jeton):
 	#fonction qui retourne True si le joueur a gagné 
@@ -138,6 +166,35 @@ def fin_jeu(tableau):
 	return gagne(tableau, JETON_JOUEUR) or gagne(tableau, JETON_IA) or len(get_emplacement_valide(tableau)) == 0
 
 
+def get_emplacement_valide(tableau):
+	#fonction pour savoir si l'emplacement choisi est valide
+	bon_emplacement = []
+	for col in range(NB_COLONNES):
+		if emplacement_valide(tableau, col):
+			bon_emplacement.append(col)
+	return bon_emplacement
+
+def meilleur_depot(tableau, jeton):
+	#fonction qui retourne la colonne ayant le meilleur choix de depot de jeton
+	bon_emplacement = get_emplacement_valide(tableau)
+	meilleur_score = -10000
+	meilleure_col = random.choice(bon_emplacement)
+	for col in bon_emplacement:
+		ligne = get_ligne_suivante(tableau, col)
+		tableau_tmp = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact sur le tableau de base
+		depot_jeton(tableau_tmp, ligne, col, jeton)
+		score = score_position(tableau_tmp, jeton)
+		if score > meilleur_score:
+			meilleur_score = score
+			meilleure_col = col
+			
+	return meilleure_col
+
+########################################################################################
+#######################################  IA  ###########################################
+########################################################################################
+
+
 def algo_minimax(tableau, profondeur, alpha, beta, joueurMAX):
 	#algo representant un arbre dont les noeuds vont alterner entre MAX et MIN
 	#MAX va chercher à faire remonter à la racine de l'arbre la plus grande valeur de sortie, tandis que 
@@ -190,46 +247,13 @@ def algo_minimax(tableau, profondeur, alpha, beta, joueurMAX):
 				break
 		return colonne, value
 
-def get_emplacement_valide(tableau):
-	#fonction pour savoir si l'emplacement choisi est valide
-	bon_emplacement = []
-	for col in range(NB_COLONNES):
-		if emplacement_valide(tableau, col):
-			bon_emplacement.append(col)
-	return bon_emplacement
-
-def meilleur_depot(tableau, jeton):
-	#fonction qui retourne la colonne ayant le meilleur choix de depot de jeton
-	bon_emplacement = get_emplacement_valide(tableau)
-	meilleur_score = -10000
-	meilleure_col = random.choice(bon_emplacement)
-	for col in bon_emplacement:
-		ligne = get_ligne_suivante(tableau, col)
-		tableau_tmp = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact sur le tableau de base
-		depot_jeton(tableau_tmp, ligne, col, jeton)
-		score = score_position(tableau_tmp, jeton)
-		if score > meilleur_score:
-			meilleur_score = score
-			meilleure_col = col
-			
-	return meilleure_col
-
-def draw_tableau(tableau):
-	#création de la fenetre graphique
-	for c in range(NB_COLONNES):
-		for l in range(NB_LIGNES):
-			pygame.draw.rect(fenetre, BLEU, (c*TAILLE_GRILLE, l*TAILLE_GRILLE+TAILLE_GRILLE, TAILLE_GRILLE, TAILLE_GRILLE))
-			pygame.draw.circle(fenetre, NOIR, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), int(l*TAILLE_GRILLE+TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE)
-	
-	for c in range(NB_COLONNES):
-		for l in range(NB_LIGNES):		
-			if tableau[l][c] == JETON_JOUEUR:
-				pygame.draw.circle(fenetre, ROUGE, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), hauteur-int(l*TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE) #on ajoute "hauteur -" pour que le tableau se remplisse 
-			elif tableau[l][c] == JETON_IA: 																									 #par le bas d'abord							
-				pygame.draw.circle(fenetre, JAUNE, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), hauteur-int(l*TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE)
-	pygame.display.update()
 
 
+
+
+########################################################################################
+#####################################  Game  ###########################################
+########################################################################################
 
 
 

@@ -6,27 +6,15 @@ import math
 
 class IA:
 
+#initialisation du numéro de jeton des joueurs
+JOUEUR = 0
+IA = 1
+#initalisation du numéro du joueur pour l'affichage du tableau dans le terminal 
+JETON_JOUEUR = 1
+JETON_IA = 2
+
     def __init__(self):
-        #intialisation des couleurs
-        BLEU = (0,0,255)
-        NOIR = (0,0,0)
-        ROUGE = (255,0,0)
-        JAUNE = (255,255,0)
-
-        #initialisation de la fenêtre
-        NB_LIGNES = 6
-        NB_COLONNES = 7
-        FENETRE_LENGTH = 4 
-        VIDE = 0
-        TAILLE_GRILLE = 100
-
-        #initialisation du numéro de jeton des joueurs
-        JOUEUR = 0
-        IA = 1
-        #initalisation du numéro du joueur pour l'affichage du tableau dans le terminal 
-        JETON_JOUEUR = 1
-        JETON_IA = 2
-
+        
 
     def algo_minimax(self,tableau, profondeur, alpha, beta, joueurMAX):
         #algo representant un arbre dont les noeuds vont alterner entre MAX et MIN
