@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np  #pour creer une matrice
 import random
 import pygame
 import sys
@@ -24,9 +24,24 @@ TAILLE_GRILLE = 100
 #initialisation du numéro de jeton des joueurs
 JOUEUR = 0
 IA = 1
+IA1 = JOUEUR
+
 #initalisation du numéro du joueur pour l'affichage du tableau dans le terminal 
-JETON_JOUEUR = 1
+JETON_JOUEUR1 = 1
 JETON_IA = 2
+JETON_JOUEUR2 = JETON_IA
+
+#intialisation de la fenêtre
+pygame.init()
+
+largeur = NB_COLONNES * TAILLE_GRILLE
+hauteur = (NB_LIGNES+1) * TAILLE_GRILLE #en comptant la ligne du haut où le jeton se déplace
+taille = (largeur, hauteur)
+
+CERCLE = int(TAILLE_GRILLE/2 - 5)
+
+#police et taille d'écriture
+times_new_roman = pygame.font.SysFont('Times New Roman', 75)
 
 ########################################################################################
 ###################################  Interface  ########################################
@@ -44,6 +59,7 @@ def depot_jeton(tableau, ligne, col, jeton):
 
 
 def get_ligne_suivante(tableau, col):
+	#recupere la ligne suivante
 	for l in range(NB_LIGNES):
 		if tableau[l][col] == 0:
 			return l
@@ -62,7 +78,7 @@ def draw_tableau(tableau):
 	
 	for c in range(NB_COLONNES):
 		for l in range(NB_LIGNES):		
-			if tableau[l][c] == JETON_JOUEUR:
+			if tableau[l][c] == JETON_JOUEUR1:
 				pygame.draw.circle(fenetre, ROUGE, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), hauteur-int(l*TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE) #on ajoute "hauteur -" pour que le tableau se remplisse 
 			elif tableau[l][c] == JETON_IA: 																									 #par le bas d'abord							
 				pygame.draw.circle(fenetre, JAUNE, (int(c*TAILLE_GRILLE+TAILLE_GRILLE/2), hauteur-int(l*TAILLE_GRILLE+TAILLE_GRILLE/2)), CERCLE)
@@ -107,8 +123,8 @@ def gagne(tableau, jeton):
 def calcul_score(fenetre, jeton):
 	#retourne le score du joueur en fonction des possibilités qui s'offrent à celui selon son placement
 	score = 0
-	jeton_adverse = JETON_JOUEUR
-	if jeton == JETON_JOUEUR:
+	jeton_adverse = JETON_JOUEUR1
+	if jeton == JETON_JOUEUR1:
 		jeton_adverse = JETON_IA
 
 	if fenetre.count(jeton) == 4:
@@ -163,7 +179,7 @@ def score_position(tableau, jeton):
 
 def fin_jeu(tableau):
 	#si le joueur gagne, l'IA gagne, ou toutes les cases sont remplies 
-	return gagne(tableau, JETON_JOUEUR) or gagne(tableau, JETON_IA) or len(get_emplacement_valide(tableau)) == 0
+	return gagne(tableau, JETON_JOUEUR1) or gagne(tableau, JETON_IA) or len(get_emplacement_valide(tableau)) == 0
 
 
 def get_emplacement_valide(tableau):
@@ -173,6 +189,121 @@ def get_emplacement_valide(tableau):
 		if emplacement_valide(tableau, col):
 			bon_emplacement.append(col)
 	return bon_emplacement
+
+
+
+########################################################################################
+#######################################  IA  ###########################################
+########################################################################################
+
+				##############  niveau 2 #################
+
+def algo_minimax(tableau, profondeur, joueurMAX):
+	#algo representant un arbre dont les noeuds vont alterner entre MAX et MIN
+	#MAX va chercher à faire remonter à la racine de l'arbre la plus grande valeur de sortie, tandis que 
+	#MIN va chercher à faire remonter la plus basse
+	bon_emplacement = get_emplacement_valide(tableau)
+	partie_finie = fin_jeu(tableau)
+	if profondeur == 0 or partie_finie:
+		if partie_finie:
+			if gagne(tableau, JETON_IA):
+				return (None, 100000000000000)
+			elif gagne(tableau, JETON_JOUEUR1):
+				return (None, -10000000000000)
+			else: #Pas de gagnant, plus de possibilité de jouer
+				return (None, 0)
+		else: # profondeur à 0
+			return (None, score_position(tableau, JETON_IA))
+	
+	# Joueur MAX
+	if joueurMAX:
+		#on met le score à une faible valeur
+		valeur = -math.inf
+		colonne = random.choice(bon_emplacement)
+		for col in bon_emplacement:
+			ligne = get_ligne_suivante(tableau, col)
+			tab_copie = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact sur le tableau de base
+			depot_jeton(tab_copie, ligne, col, JETON_IA)
+			nv_score = algo_minimax(tab_copie, profondeur-1, False)[1]
+			if nv_score > valeur:
+				valeur = nv_score
+				colonne = col
+		return colonne, valeur
+
+	else: # Joueur MIN
+		#on met le score à une forte valeur
+		valeur = math.inf
+		colonne = random.choice(bon_emplacement)
+		for col in bon_emplacement:
+			ligne = get_ligne_suivante(tableau, col)
+			tab_copie = tableau.copy()
+			depot_jeton(tab_copie, ligne, col, JETON_JOUEUR1)
+			nv_score = algo_minimax(tab_copie, profondeur-1, True)[1]
+			if nv_score < valeur:
+				valeur = nv_score
+				colonne = col
+		return colonne, valeur
+
+
+			##############  niveau 3 #################
+
+
+def algo_minimax_elagage(tableau, profondeur, alpha, beta, joueurMAX):
+	#algo representant un arbre dont les noeuds vont alterner entre MAX et MIN
+	#MAX va chercher à faire remonter à la racine de l'arbre la plus grande valeur de sortie, tandis que 
+	#MIN va chercher à faire remonter la plus basse
+	bon_emplacement = get_emplacement_valide(tableau)
+	partie_finie = fin_jeu(tableau)
+	if profondeur == 0 or partie_finie:
+		if partie_finie:
+			if gagne(tableau, JETON_IA):
+				return (None, 100000000000000)
+			elif gagne(tableau, JETON_JOUEUR1):
+				return (None, -10000000000000)
+			else: #Pas de gagnant, plus de possibilité de jouer
+				return (None, 0)
+		else: # profondeur à 0
+			return (None, score_position(tableau, JETON_IA))
+	
+	# Joueur MAX
+	if joueurMAX:
+		#on met le score à une faible valeur
+		valeur = -math.inf
+		colonne = random.choice(bon_emplacement)
+		for col in bon_emplacement:
+			ligne = get_ligne_suivante(tableau, col)
+			tab_copie = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact sur le tableau de base
+			depot_jeton(tab_copie, ligne, col, JETON_IA)
+			nv_score = algo_minimax_elagage(tab_copie, profondeur-1, alpha, beta, False)[1]
+			if nv_score > valeur:
+				valeur = nv_score
+				colonne = col
+			alpha = max(alpha, valeur)
+			if alpha >= beta:
+				break
+		return colonne, valeur
+
+	else: # Joueur MIN
+		#on met le score à une forte valeur
+		valeur = math.inf
+		colonne = random.choice(bon_emplacement)
+		for col in bon_emplacement:
+			ligne = get_ligne_suivante(tableau, col)
+			tab_copie = tableau.copy()
+			depot_jeton(tab_copie, ligne, col, JETON_JOUEUR1)
+			nv_score = algo_minimax_elagage(tab_copie, profondeur-1, alpha, beta, True)[1]
+			if nv_score < valeur:
+				valeur = nv_score
+				colonne = col
+			beta = min(beta, valeur)
+			if alpha >= beta:
+				break
+		return colonne, valeur
+
+
+			##############  fonction d'évaluation #################
+				  ##############  niveau 1   #################
+
 
 def meilleur_depot(tableau, jeton):
 	#fonction qui retourne la colonne ayant le meilleur choix de depot de jeton
@@ -190,70 +321,19 @@ def meilleur_depot(tableau, jeton):
 			
 	return meilleure_col
 
-########################################################################################
-#######################################  IA  ###########################################
-########################################################################################
-
-
-def algo_minimax(tableau, profondeur, alpha, beta, joueurMAX):
-	#algo representant un arbre dont les noeuds vont alterner entre MAX et MIN
-	#MAX va chercher à faire remonter à la racine de l'arbre la plus grande valeur de sortie, tandis que 
-	#MIN va chercher à faire remonter la plus basse
-	bon_emplacement = get_emplacement_valide(tableau)
-	partie_finie = fin_jeu(tableau)
-	if profondeur == 0 or partie_finie:
-		if partie_finie:
-			if gagne(tableau, JETON_IA):
-				return (None, 100000000000000)
-			elif gagne(tableau, JETON_JOUEUR):
-				return (None, -10000000000000)
-			else: #Pas de gagnant, plus de possibilité de jouer
-				return (None, 0)
-		else: # profondeur à 0
-			return (None, score_position(tableau, JETON_IA))
-	
-	# Joueur MAX
-	if joueurMAX:
-		#on met le score à une faible valeur
-		value = -math.inf
-		colonne = random.choice(bon_emplacement)
-		for col in bon_emplacement:
-			ligne = get_ligne_suivante(tableau, col)
-			tab_copie = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact sur le tableau de base
-			depot_jeton(tab_copie, ligne, col, JETON_IA)
-			nv_score = algo_minimax(tab_copie, profondeur-1, alpha, beta, False)[1]
-			if nv_score > value:
-				value = nv_score
-				colonne = col
-			alpha = max(alpha, value)
-			if alpha >= beta:
-				break
-		return colonne, value
-
-	else: # Joueur MIN
-		#on met le score à une forte valeur
-		value = math.inf
-		colonne = random.choice(bon_emplacement)
-		for col in bon_emplacement:
-			ligne = get_ligne_suivante(tableau, col)
-			tab_copie = tableau.copy()
-			depot_jeton(tab_copie, ligne, col, JETON_JOUEUR)
-			nv_score = algo_minimax(tab_copie, profondeur-1, alpha, beta, True)[1]
-			if nv_score < value:
-				value = nv_score
-				colonne = col
-			beta = min(beta, value)
-			if alpha >= beta:
-				break
-		return colonne, value
-
-
-
-
 
 ########################################################################################
 #####################################  Game  ###########################################
 ########################################################################################
+
+print("Bonjour ! Souhaitez-vous jouer : ")
+choix = int(input("1 - Jeu 2 joueurs\t 2 - Jeu contre une IA\t 3 - IA contre IA :\t"))
+
+if choix == 2 :
+	niveauIA1 = int(input("Choix du niveau IA1 : 1 - 2 - 3 ?\t"))
+elif choix == 3 : 
+	niveauIA1 = int(input("Choix du niveau IA1 : 1 - 2 - 3 ?\t"))
+	niveauIA2 = int(input("Choix du niveau IA2 : 1 - 2 - 3 ?\t"))
 
 
 
@@ -261,88 +341,142 @@ tableau = creer_tableau()
 afficher_tableau_terminal(tableau)
 game_over = False
 
-#intialisation de la fenêtre
-pygame.init()
-
-
-largeur = NB_COLONNES * TAILLE_GRILLE
-hauteur = (NB_LIGNES+1) * TAILLE_GRILLE #en comptant la ligne du haut où le jeton se déplace
-
-taille = (largeur, hauteur)
-
-CERCLE = int(TAILLE_GRILLE/2 - 5)
-
 fenetre = pygame.display.set_mode(taille)
+
 draw_tableau(tableau)
 pygame.display.update()
 
-#police et taille d'écriture
-times_new_roman = pygame.font.SysFont('Times New Roman', 75)
-
+'''Si on veut que le choix du joueur qui commence soit aléatoire : 
 #choix aléatoire du joueur qui commence la partie
-tour = random.randint(JOUEUR, IA)
+#tour = random.randint(JOUEUR, IA)'''
 
-while not game_over:
+tour = JOUEUR
+# on a initialisé plus haut : JOUEUR = IA1 donc c'est pareil que tour = IA1
+
+while not game_over :
 	#pour tout évênement
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			sys.exit()
-
-		if event.type == pygame.MOUSEMOTION:
-			#si on bouge la souris, le jeton suit le mouvement en haut des colonnes
-			pygame.draw.rect(fenetre, NOIR, (0,0, largeur, TAILLE_GRILLE))
-			posx = event.pos[0]
-			if tour == JOUEUR:
-				pygame.draw.circle(fenetre, ROUGE, (posx, int(TAILLE_GRILLE/2)), CERCLE)
-
+		if choix == 1 or choix == 2 : 
+			if event.type == pygame.MOUSEMOTION:
+				#si on bouge la souris, le jeton suit le mouvement en haut des colonnes
+				pygame.draw.rect(fenetre, NOIR, (0,0, largeur, TAILLE_GRILLE))
+				posx = event.pos[0]
+				if tour == JOUEUR:
+					pygame.draw.circle(fenetre, ROUGE, (posx, int(TAILLE_GRILLE/2)), CERCLE)
+				else : #tour de joueur 2 humain 
+					pygame.draw.circle(fenetre, JAUNE, (posx, int(TAILLE_GRILLE/2)), CERCLE)
 		pygame.display.update()
 
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			pygame.draw.rect(fenetre, NOIR, (0,0, largeur, TAILLE_GRILLE))
-			#print(event.pos)
-			
-			if tour == JOUEUR:
-				posx = event.pos[0]
-				col = int(math.floor(posx/TAILLE_GRILLE))
-
-				if emplacement_valide(tableau, col):
-					ligne = get_ligne_suivante(tableau, col)
-					depot_jeton(tableau, ligne, col, JETON_JOUEUR)
-
-					if gagne(tableau, JETON_JOUEUR):
-						label = times_new_roman.render("Joueur 1 a gagné !!!", 1, ROUGE)
-						fenetre.blit(label, (50,10)) #affichage du label sur la fenetre graphique
-						game_over = True
-
-					tour += 1
-					tour = tour % 2
-
-					afficher_tableau_terminal(tableau)
-					draw_tableau(tableau)
 
 
-	# Si c'est au tour de l'IA et que le jeu n'est pas fini
-	if tour == IA and not game_over:				
+			################################ JOUEUR1 est un humain #####################################
 
-		#col = random.randint(0, NB_COLONNES-1)
-		#col = meilleur_depot(tableau, JETON_IA)
-		col, minimax_score = algo_minimax(tableau, 5, -math.inf, math.inf, True)
+			if choix == 1 or choix == 2 : 
+				if tour == JOUEUR:
+					posx = event.pos[0]
+					col = int(math.floor(posx/TAILLE_GRILLE))
 
-		if emplacement_valide(tableau, col):
-			pygame.time.wait(500) #temps d'attente pour que l'IA joue 
-			ligne = get_ligne_suivante(tableau, col)
-			depot_jeton(tableau, ligne, col, JETON_IA)
+					if emplacement_valide(tableau, col):
+						ligne = get_ligne_suivante(tableau, col)
+						depot_jeton(tableau, ligne, col, JETON_JOUEUR1)
 
-			if gagne(tableau, JETON_IA):
-				label = times_new_roman.render("Joueur 2 a gagné !!!", 1, JAUNE)
-				fenetre.blit(label, (50,10)) #affichage du label sur la fenetre graphique
-				game_over = True
+						if gagne(tableau, JETON_JOUEUR1):
+							label = times_new_roman.render("Joueur 1 a gagné !!!", 1, ROUGE)
+							fenetre.blit(label, (50,10)) #affichage du label sur la fenetre graphique
+							game_over = True
+				else : # tour du joueur 2 humain 
+					posx = event.pos[0]
+					col = int(math.floor(posx/TAILLE_GRILLE))
+	
+					if emplacement_valide(tableau, col):
+						ligne = get_ligne_suivante(tableau, col)
+						depot_jeton(tableau, ligne, col, JETON_JOUEUR2)
+						
+						if gagne(tableau, JETON_JOUEUR2):
+							label = times_new_roman.render("Joueur 2 a gagné !!!", 1, JAUNE)
+							fenetre.blit(label, (50,10)) #affichage du label sur la fenetre graphique
+							game_over = True
 
-			afficher_tableau_terminal(tableau)
-			draw_tableau(tableau)
+				tour += 1
+				tour = tour % 2
 
-			tour += 1
-			tour = tour % 2
+				afficher_tableau_terminal(tableau) #affichage des jetons dans la grille du terminal
+				draw_tableau(tableau) #affichage des jetons dans la grille de l'interface
+	
+
+			################################ JOUEUR1 est une IA #####################################
+	
+	if choix == 3 : 		
+		if tour == IA1 :
+			#appel de la bonne méthode en fonction du niveau de l'IA choisie
+			if niveauIA1 == 1 :
+				col = meilleur_depot(tableau, JETON_IA)
+			elif niveauIA1 == 2 :
+				col, minimax_score = algo_minimax(tableau, 3, True)
+			elif niveauIA1 == 3 :
+				col, minimax_score = algo_minimax_elagage(tableau, 5,-math.inf, math.inf, True)
+
+
+			if emplacement_valide(tableau, col):
+				pygame.time.wait(500) #temps d'attente pour que l'IA joue 
+				ligne = get_ligne_suivante(tableau, col)
+				depot_jeton(tableau, ligne, col, JETON_JOUEUR1)
+
+				if gagne(tableau, JETON_JOUEUR1):
+					label = times_new_roman.render("Joueur 1 a gagné !!!", 1, ROUGE)
+					fenetre.blit(label, (50,10)) #affichage du label sur la fenetre graphique
+					game_over = True
+
+				afficher_tableau_terminal(tableau)
+				draw_tableau(tableau)
+
+				tour += 1
+				tour = tour % 2		#modulo 2
+
+
+
+
+
+
+#####################################  tour IA ##############################################
+#donc soit jouant le rôle du joueur2 si le choix était 1, soit alternant entre joueur1 et joueur2
+
+	if choix != 1 :
+		# Si c'est au tour de l'IA et que le jeu n'est pas fini
+		if tour == IA and not game_over :				
+			if choix == 2 : 
+				niveauIA2 = niveauIA1
+				
+			#appel de la bonne méthode en fonction du niveau de l'IA choisi
+			if niveauIA2 == 1 :
+				col = meilleur_depot(tableau, JETON_IA)
+			elif niveauIA2 == 2 :
+				col, minimax_score = algo_minimax(tableau, 3, True)
+			elif niveauIA2 == 3 :
+				col, minimax_score = algo_minimax_elagage(tableau, 5,-math.inf, math.inf, True)
+		
+
+			if emplacement_valide(tableau, col):
+				pygame.time.wait(500) #temps d'attente pour que l'IA joue 
+				ligne = get_ligne_suivante(tableau, col)
+				depot_jeton(tableau, ligne, col, JETON_IA)
+
+				if gagne(tableau, JETON_IA):
+					label = times_new_roman.render("Joueur 2 a gagné !!!", 1, JAUNE)
+					fenetre.blit(label, (50,10)) #affichage du label sur la fenetre graphique
+					game_over = True
+
+				afficher_tableau_terminal(tableau)
+				draw_tableau(tableau)
+
+				tour += 1
+				tour = tour % 2		#modulo 2
 
 	if game_over:
-		pygame.time.wait(5000)
+		pygame.time.wait(5000) # temps avant de fermer la fenêtre
+
+
