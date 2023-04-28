@@ -93,6 +93,15 @@ def emplacement_valide(tableau, col):
 	return tableau[NB_LIGNES-1][col] == 0
 
 
+def get_emplacement_valide(tableau):
+	#fonction pour savoir si l'emplacement choisi est valide
+	bon_emplacement = []
+	for col in range(NB_COLONNES):
+		if emplacement_valide(tableau, col):
+			bon_emplacement.append(col)
+	return bon_emplacement
+
+
 def gagne(tableau, jeton):
 	#fonction qui retourne True si le joueur a gagné 
 
@@ -182,19 +191,32 @@ def fin_jeu(tableau):
 	return gagne(tableau, JETON_JOUEUR1) or gagne(tableau, JETON_IA) or len(get_emplacement_valide(tableau)) == 0
 
 
-def get_emplacement_valide(tableau):
-	#fonction pour savoir si l'emplacement choisi est valide
-	bon_emplacement = []
-	for col in range(NB_COLONNES):
-		if emplacement_valide(tableau, col):
-			bon_emplacement.append(col)
-	return bon_emplacement
-
 
 
 ########################################################################################
 #######################################  IA  ###########################################
 ########################################################################################
+
+
+				  ##############  niveau 1   #################
+
+
+def meilleur_depot(tableau, jeton):
+	#fonction qui retourne la colonne ayant le meilleur choix de depot de jeton
+	bon_emplacement = get_emplacement_valide(tableau)
+	meilleur_score = -10000
+	meilleure_col = random.choice(bon_emplacement)
+	for col in bon_emplacement:
+		ligne = get_ligne_suivante(tableau, col)
+		tableau_tmp = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact sur le tableau de base
+		depot_jeton(tableau_tmp, ligne, col, jeton)
+		score = score_position(tableau_tmp, jeton)
+		if score > meilleur_score:
+			meilleur_score = score
+			meilleure_col = col
+			
+	return meilleure_col
+
 
 				##############  niveau 2 #################
 
@@ -301,25 +323,6 @@ def algo_minimax_elagage(tableau, profondeur, alpha, beta, joueurMAX):
 		return colonne, valeur
 
 
-			##############  fonction d'évaluation #################
-				  ##############  niveau 1   #################
-
-
-def meilleur_depot(tableau, jeton):
-	#fonction qui retourne la colonne ayant le meilleur choix de depot de jeton
-	bon_emplacement = get_emplacement_valide(tableau)
-	meilleur_score = -10000
-	meilleure_col = random.choice(bon_emplacement)
-	for col in bon_emplacement:
-		ligne = get_ligne_suivante(tableau, col)
-		tableau_tmp = tableau.copy() #on cree une copie du tableau afin que les modifiactions que l'on fera n'auront pas d'impact sur le tableau de base
-		depot_jeton(tableau_tmp, ligne, col, jeton)
-		score = score_position(tableau_tmp, jeton)
-		if score > meilleur_score:
-			meilleur_score = score
-			meilleure_col = col
-			
-	return meilleure_col
 
 
 ########################################################################################
